@@ -3,13 +3,13 @@ package chain
 import (
 	"context"
 	"crypto/ecdsa"
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	log "github.com/sirupsen/logrus"
+	"math/big"
 )
 
 type TxBuilder interface {
@@ -18,7 +18,7 @@ type TxBuilder interface {
 }
 
 type TxBuild struct {
-	client      bind.ContractTransactor
+	client      *ethclient.Client
 	privateKey  *ecdsa.PrivateKey
 	signer      types.Signer
 	fromAddress common.Address
@@ -50,12 +50,14 @@ func (b *TxBuild) Sender() common.Address {
 }
 
 func (b *TxBuild) Transfer(ctx context.Context, to string, value *big.Int) (common.Hash, error) {
+	log.Infof("transer >> contractAddress: fromAddress: %s toAddress: %s  amount:  %s",
+		b.fromAddress.Hex(), to, value.String())
 	nonce, err := b.client.PendingNonceAt(ctx, b.Sender())
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	gasLimit := uint64(21000)
+	gasLimit := uint64(1000000)
 	gasPrice, err := b.client.SuggestGasPrice(ctx)
 	if err != nil {
 		return common.Hash{}, err
@@ -75,5 +77,20 @@ func (b *TxBuild) Transfer(ctx context.Context, to string, value *big.Int) (comm
 		return common.Hash{}, err
 	}
 
-	return signedTx.Hash(), b.client.SendTransaction(ctx, signedTx)
+	if err := b.client.SendTransaction(ctx, signedTx); err != nil {
+		log.Errorf("builder SendTransaction error, %v", err)
+		return common.Hash{}, err
+	}
+
+	log.Infof("transer contractAddress: fromAddress: %s, toAddress: %s with amount %s",
+		b.fromAddress.Hex(), to, value.String())
+
+	log.Infof("tx-hash: %s", signedTx.Hash().Hex())
+
+	if _, err := bind.WaitMined(context.Background(), b.client, signedTx); err != nil {
+		log.Errorf("mintToken WaitMined error, %v", err)
+		return signedTx.Hash(), nil
+	}
+
+	return signedTx.Hash(), nil
 }

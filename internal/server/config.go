@@ -19,3 +19,13 @@ func NewConfig(network string, httpPort, interval, payout, proxyCount, queueCap 
 		queueCap:   queueCap,
 	}
 }
+
+type Erc20Token struct {
+	ContractAddress string `json:"contract_address"`
+	Decimal         int    `json:"decimal,omitempty"`
+	Symbol          string `json:"symbol"`
+}
+
+type Erc20Tokens struct {
+	Tokens []Erc20Tokens `json:"tokens,omitempty"`
+}
