@@ -4,13 +4,14 @@
   import { setDefaults as setToast, toast } from 'bulma-toast';
 
   let address = null;
+  let symbol = null;
   let faucetInfo = {
     account: '0x0000000000000000000000000000000000000000',
     network: 'testnet',
     payout: 1,
   };
 
-  $: document.title = `XT ${capitalize(faucetInfo.network)} Faucet`;
+  $: document.title = `XST ${capitalize(faucetInfo.network)} Faucet`;
 
   onMount(async () => {
     const res = await fetch('/api/info');
@@ -35,6 +36,7 @@
 
     let formData = new FormData();
     formData.append('address', address);
+    formData.append('symbol', symbol);
     const res = await fetch('/api/claim', {
       method: 'POST',
       body: formData,
@@ -60,7 +62,7 @@
               <span class="icon">
                 <i class="fa fa-bath" />
               </span>
-              <span><b>XT Faucet</b></span>
+              <span><b>XSC Faucet</b></span>
             </a>
           </div>
           <div id="navbarMenu" class="navbar-menu">
@@ -93,25 +95,30 @@
           </h2>
           <div class="box">
             <div class="field is-grouped">
-              <p class="control is-expanded">
+<!--              <p class="control is-expanded">-->
                 <input
                   bind:value={address}
                   class="input is-rounded"
                   type="text"
                   placeholder="Enter your address"
                 />
-              </p>
-              <p class="control">
-                <button
-                  on:click={handleRequest}
-                  class="button is-primary is-rounded"
-                >
-                  Request
-                </button>
-              </p>
+<!--              </p>-->
+<!--              <p class="control is-expanded">-->
+                <input bind:value={symbol}
+                        class="input is-rounded"
+                        type="text"
+                        placeholder="Enter token, default xt"
+                />
+<!--              </p>-->
+              <button
+                      on:click={handleRequest}
+                      class="button is-primary is-rounded"
+              >
+                Submit
+              </button>
             </div>
           </div>
-        </div>
+          </div>
       </div>
     </div>
   </section>

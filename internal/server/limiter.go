@@ -34,6 +34,9 @@ func NewLimiter(proxyCount int, ttl time.Duration) *Limiter {
 
 func (l *Limiter) ServeHTTP(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	address := r.PostFormValue(AddressKey)
+	symbol := r.PostFormValue(SymbolKey)
+
+	key := address + ":" + symbol
 	if !chain.IsValidAddress(address, true) {
 		http.Error(w, "invalid address", http.StatusBadRequest)
 		return
@@ -43,25 +46,27 @@ func (l *Limiter) ServeHTTP(w http.ResponseWriter, r *http.Request, next http.Ha
 		return
 	}
 
-	clintIP := getClientIPFromRequest(l.proxyCount, r)
+	//clintIP := getClientIPFromRequest(l.proxyCount, r)
 	l.mutex.Lock()
-	if l.limitByKey(w, address) || l.limitByKey(w, clintIP) {
+	//if l.limitByKey(w, key) || l.limitByKey(w, clintIP) {
+	if l.limitByKey(w, key) {
 		l.mutex.Unlock()
 		return
 	}
-	l.cache.SetWithTTL(address, true, l.ttl)
-	l.cache.SetWithTTL(clintIP, true, l.ttl)
+	l.cache.SetWithTTL(key, true, l.ttl)
+	//l.cache.SetWithTTL(clintIP, true, l.ttl)
 	l.mutex.Unlock()
 
 	next.ServeHTTP(w, r)
 	if w.(negroni.ResponseWriter).Status() != http.StatusOK {
-		l.cache.Remove(address)
-		l.cache.Remove(clintIP)
+		l.cache.Remove(key)
+		//l.cache.Remove(clintIP)
 		return
 	}
 	log.WithFields(log.Fields{
-		"address":  address,
-		"clientIP": clintIP,
+		"address": address,
+		"symbol":  symbol,
+		//"clientIP": clintIP,
 	}).Info("Maximum request limit has been reached")
 }
 

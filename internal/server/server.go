@@ -83,7 +83,7 @@ func (s *Server) consumeQueue() {
 		}
 
 		log.Infof("address %s symbol %s", address, symbol)
-		if symbol == "" {
+		if symbol == "" || symbol == "xt" {
 			txHash, txErr = s.tx.Transfer(context.Background(), address, chain.EtherToWei(int64(s.cfg.payout)))
 		} else {
 			log.Infof("tx address %s symbol %s", address, symbol)
@@ -98,6 +98,7 @@ func (s *Server) consumeQueue() {
 			log.WithFields(log.Fields{
 				"txHash":  txHash,
 				"address": address,
+				"symbol":  symbol,
 			}).Info("Consume from queue successfully")
 		}
 	}
@@ -111,7 +112,12 @@ func (s *Server) handleClaim() http.HandlerFunc {
 		}
 
 		address := r.PostFormValue(AddressKey)
-		symbol := r.PostFormValue(SymbolKey)
+		inputSymbol := r.PostFormValue(SymbolKey)
+
+		symbol := strings.ToLower(inputSymbol)
+		if symbol == "" || symbol == "null" {
+			symbol = "xt"
+		}
 
 		log.Infof("address %s symbol %s", address, symbol)
 		// Try to lock mutex if the work queue is empty
@@ -120,6 +126,7 @@ func (s *Server) handleClaim() http.HandlerFunc {
 			case s.queue <- address + ":" + symbol:
 				log.WithFields(log.Fields{
 					"address": address,
+					"symbol":  symbol,
 				}).Info("Added to queue successfully")
 				fmt.Fprintf(w, "Added %s to the queue", address)
 			default:
@@ -135,7 +142,7 @@ func (s *Server) handleClaim() http.HandlerFunc {
 
 		var txHash common.Hash
 		var txErr error
-		if symbol == "" {
+		if symbol == "" || symbol == "xt" {
 			txHash, txErr = s.tx.Transfer(ctx, address, chain.EtherToWei(int64(s.cfg.payout)))
 		} else {
 			log.Infof("tx address %s symbol %s", address, symbol)
@@ -154,6 +161,7 @@ func (s *Server) handleClaim() http.HandlerFunc {
 		log.WithFields(log.Fields{
 			"txHash":  txHash,
 			"address": address,
+			"symbol":  symbol,
 		}).Info("Funded directly successfully")
 		fmt.Fprintf(w, "Txhash: %s", txHash)
 	}
